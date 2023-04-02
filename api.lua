@@ -3689,6 +3689,12 @@ minetest.register_entity(name, setmetatable({
 
 	on_grown = def.on_grown,
 
+	on_detach_child = function(self, child)
+	if child and child:get_player_name() == self.driver then
+		player_api.player_attached[child:get_player_name()] = false
+		self.driver = nil
+	end
+
 	on_activate = function(self, staticdata, dtime)
 		return self:mob_activate(staticdata, def, dtime)
 	end,
