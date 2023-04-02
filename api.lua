@@ -3693,7 +3693,7 @@ minetest.register_entity(name, setmetatable({
 	if child and child:get_player_name() == self.driver then
 		player_api.player_attached[child:get_player_name()] = false
 		self.driver = nil
-	end
+	end,
 
 	on_activate = function(self, staticdata, dtime)
 		return self:mob_activate(staticdata, def, dtime)
