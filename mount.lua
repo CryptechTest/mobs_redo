@@ -129,6 +129,7 @@ end)
 
 minetest.register_on_respawnplayer(function(player)  
 	force_detach(player)
+	return true
 end)
 
 
