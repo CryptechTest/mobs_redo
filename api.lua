@@ -785,7 +785,7 @@ function mob_class:item_drop()
 			end
 
 			-- only drop rare items (drops.min = 0) if killed by player
-			if death_by_player or self.drops[n].min ~= 0 then
+			if (death_by_player or self.drops[n].min ~= 0) and item ~= nil then
 				obj = minetest.add_item(pos, ItemStack(item .. " " .. (num + looting)))
 			end
 
