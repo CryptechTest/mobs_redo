@@ -127,7 +127,7 @@ minetest.register_on_dieplayer(function(player)
 	return true
 end)
 
-minetest.register_on_respawnplayer(function(player)  
+minetest.register_on_respawnplayer(function(player)
 	force_detach(player)
 	return true
 end)
