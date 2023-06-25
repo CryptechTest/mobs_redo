@@ -11,7 +11,7 @@ minetest.register_craftitem("mobs:nametag", {
 if minetest.get_modpath("dye") and minetest.get_modpath("farming") then
 	minetest.register_craft({
 		output = "mobs:nametag",
-		recipe = {{"default:paper", "dye:black", "farming:string"}}
+		recipe = {{"default:paper", "dye:black", "group:string"}}
 	})
 end
 
@@ -69,9 +69,9 @@ if minetest.get_modpath("farming") then
 	minetest.register_craft({
 		output = "mobs:lasso",
 		recipe = {
-			{"farming:string", "", "farming:string"},
+			{"group:string", "", "group:string"},
 			{"", "default:diamond", ""},
-			{"farming:string", "", "farming:string"}
+			{"group:string", "", "group:string"}
 		}
 	})
 end
@@ -92,7 +92,7 @@ if minetest.get_modpath("farming") then
 		recipe = {
 			{"group:stick", "", "group:stick"},
 			{"group:stick", "", "group:stick"},
-			{"farming:string", "group:stick", "farming:string"}
+			{"group:string", "group:stick", "group:string"}
 		}
 	})
 end
