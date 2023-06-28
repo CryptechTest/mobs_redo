@@ -174,7 +174,7 @@ mobs.mob_class = {
 	attack_chance = 5,
 	passive = false,
 	blood_amount = 5,
-	blood_texture = "mobs_blood.png",
+	blood_texture = {"mobs_blood_1.png", "mobs_blood_2.png", "mobs_blood_3.png"},
 	shoot_offset = 0,
 	floats = 1, -- floats in water by default
 	replace_offset = 0,
@@ -2939,7 +2939,9 @@ function mob_class:on_punch(hitter, tflp, tool_capabilities, dir, damage)
 			pos.y = pos.y + (-self.collisionbox[2] + self.collisionbox[5]) * .5
 
 			-- lots of damage = more blood :)
-			if damage > 10 then
+			if damage > 20 then
+				amount = self.blood_amount * 4
+			elseif damage > 10 then
 				amount = self.blood_amount * 2
 			end
 
@@ -2948,7 +2950,7 @@ function mob_class:on_punch(hitter, tflp, tool_capabilities, dir, damage)
 				blood = self.blood_texture[random(#self.blood_texture)]
 			end
 
-			effect(pos, amount, blood, 1, 2, 1.75, nil, nil, true)
+			effect(pos, amount, blood, 0.25, 1.6, 1.75, -6, nil, true)
 		end
 
 		-- add healthy afterglow when hit (can cause lag with larger textures)
