@@ -145,7 +145,7 @@ mobs.mob_class = {
 	attack_chance = 5,
 	attack_patience = 11,
 	passive = false,
-	blood_amount = 5, blood_texture = "mobs_blood.png",
+	blood_amount = 5, blood_texture = {"mobs_blood_1.png", "mobs_blood_2.png", "mobs_blood_3.png"},
 	shoot_offset = 0,
 	floats = true, -- floats in water
 	replace_offset = 0,
