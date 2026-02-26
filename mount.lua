@@ -1,47 +1,38 @@
+
 -- lib_mount by Blert2112 (edited by TenPlus1)
 
-local is_50 = minetest.get_modpath("player_api") -- 5.x compatibility
+local is_mc2 = core.get_modpath("mcl_mobs") -- MineClone2 check
+
+-- one of these is needed to ride mobs, otherwise no riding for you
+
+if not core.get_modpath("player_api") and not is_mc2 then
+
+	function mobs.attach() end
+	function mobs.detach() end
+	function mobs.fly() end
+	function mobs.drive() end
+
+	return
+end
+
+-- Localise some functions
 
 local abs, cos, floor, sin, sqrt, pi =
 		math.abs, math.cos, math.floor, math.sin, math.sqrt, math.pi
 
---
--- Helper functions
---
+-- helper functions
 
-local node_ok = function(pos, fallback)
+local function node_is(entity)
 
-	fallback = fallback or mobs.fallback_node
+	if not entity.standing_on then return "other" end
 
-	local node = minetest.get_node_or_nil(pos)
+	if entity.standing_on == "air" then return "air" end
 
-	if node and minetest.registered_nodes[node.name] then
-		return node
-	end
+	local def = core.registered_nodes[entity.standing_on]
 
-	return {name = fallback}
-end
-
-
-local function node_is(pos)
-
-	local node = node_ok(pos)
-
-	if node.name == "air" then
-		return "air"
-	end
-
-	if minetest.get_item_group(node.name, "lava") ~= 0 then
-		return "lava"
-	end
-
-	if minetest.get_item_group(node.name, "liquid") ~= 0 then
-		return "liquid"
-	end
-
-	if minetest.registered_nodes[node.name].walkable == true then
-		return "walkable"
-	end
+	if def.groups.lava then return "lava" end
+	if def.groups.liquid then return "liquid" end
+	if def.groups.walkable then return "walkable" end
 
 	return "other"
 end
@@ -49,13 +40,9 @@ end
 
 local function get_sign(i)
 
-	i = i or 0
+	if not i or i == 0 then return 0 end
 
-	if i == 0 then
-		return 0
-	else
-		return i / abs(i)
-	end
+	return i / abs(i)
 end
 
 
@@ -75,18 +62,13 @@ end
 
 local function force_detach(player)
 
-	if not player then return end
+	local attached_to = player and player:get_attach()
 
-	local attached_to = player:get_attach()
-
-	if not attached_to then
-		return
-	end
+	if not attached_to then return end
 
 	local entity = attached_to:get_luaentity()
 
-	if entity and entity.driver
-	and entity.driver == player then
+	if entity and entity.driver and entity.driver == player then
 		entity.driver = nil
 	end
 
@@ -94,70 +76,62 @@ local function force_detach(player)
 
 	local name = player:get_player_name()
 
-	if is_50 then
+	if is_mc2 then
+		mcl_player.player_attached[player:get_player_name()] = false
+		mcl_player.player_set_animation(player, "stand", 30)
+	else
 		player_api.player_attached[name] = false
 		player_api.set_animation(player, "stand", 30)
-	else
-		default.player_attached[name] = false
-		default.player_set_animation(player, "stand", 30)
 	end
 
 	player:set_eye_offset({x = 0, y = 0, z = 0}, {x = 0, y = 0, z = 0})
 	player:set_properties({visual_size = {x = 1, y = 1}})
 end
 
+-- detach player on leaving
 
-minetest.register_on_leaveplayer(function(player)
+core.register_on_leaveplayer(function(player)
 	force_detach(player)
 end)
 
+-- detatch all players on shutdown
 
-minetest.register_on_shutdown(function()
+core.register_on_shutdown(function()
 
-	local players = minetest.get_connected_players()
+	local players = core.get_connected_players()
 
 	for i = 1, #players do
 		force_detach(players[i])
 	end
 end)
 
+-- detatch player when dead
 
-minetest.register_on_dieplayer(function(player)
+core.register_on_dieplayer(function(player)
 	force_detach(player)
 	return true
 end)
 
-minetest.register_on_respawnplayer(function(player)
-	force_detach(player)
-	return true
-end)
+-- find free position to detach player
 
-
--- Just for correct detaching
 local function find_free_pos(pos)
 
 	local check = {
-		{x = 1,  y = 0, z =  0},
-		{x = 1,  y = 1, z =  0},
-		{x = -1, y = 0, z =  0},
-		{x = -1, y = 1, z =  0},
-		{x = 0,  y = 0, z =  1},
-		{x = 0,  y = 1, z =  1},
-		{x = 0,  y = 0, z = -1},
-		{x = 0,  y = 1, z = -1}
+		{x = 1,  y = 0, z =  0}, {x = 1,  y = 1, z =  0}, {x = -1, y = 0, z =  0},
+		{x = -1, y = 1, z =  0}, {x = 0,  y = 0, z =  1}, {x = 0,  y = 1, z =  1},
+		{x = 0,  y = 0, z = -1}, {x = 0,  y = 1, z = -1}
 	}
 
 	for _, c in pairs(check) do
 
 		local npos = {x = pos.x + c.x, y = pos.y + c.y, z = pos.z + c.z}
-		local node = minetest.get_node_or_nil(npos)
+		local node = core.get_node_or_nil(npos)
 
 		if node and node.name then
 
-			local def = minetest.registered_nodes[node.name]
+			local def = core.registered_nodes[node.name]
 
-			if def and not def.walkable and
-					def.liquidtype == "none" then
+			if def and not def.walkable and def.liquidtype == "none" then
 				return npos
 			end
 		end
@@ -166,8 +140,20 @@ local function find_free_pos(pos)
 	return pos
 end
 
+-- are we a real player ?
+
+local function is_player(player)
+
+	if player and type(player) == "userdata" and core.is_player(player) then
+		return true
+	end
+end
+
+-- attach player to mob entity
 
 function mobs.attach(entity, player)
+
+	if not player then return end
 
 	entity.player_rotation = entity.player_rotation or {x = 0, y = 0, z = 0}
 	entity.driver_attach_at = entity.driver_attach_at or {x = 0, y = 0, z = 0}
@@ -176,9 +162,7 @@ function mobs.attach(entity, player)
 
 	local rot_view = 0
 
-	if entity.player_rotation.y == 90 then
-		rot_view = pi / 2
-	end
+	if entity.player_rotation.y == 90 then rot_view = pi / 2 end
 
 	local attach_at = entity.driver_attach_at
 	local eye_offset = entity.driver_eye_offset
@@ -187,30 +171,27 @@ function mobs.attach(entity, player)
 
 	force_detach(player)
 
-	if is_50 then
-		player_api.player_attached[player:get_player_name()] = true
+	if is_mc2 then
+		mcl_player.player_attached[player:get_player_name()] = true
 	else
-		default.player_attached[player:get_player_name()] = true
+		player_api.player_attached[player:get_player_name()] = true
 	end
 
 	player:set_attach(entity.object, "", attach_at, entity.player_rotation)
 	player:set_eye_offset(eye_offset, {x = 0, y = 0, z = 0})
 
 	player:set_properties({
-		visual_size = {
-			x = entity.driver_scale.x,
-			y = entity.driver_scale.y
-		}
+		visual_size = {x = entity.driver_scale.x, y = entity.driver_scale.y}
 	})
 
-	minetest.after(0.2, function()
+	core.after(0.2, function()
 
-		if player and player:is_player() then
+		if is_player(player) then
 
-			if is_50 then
-				player_api.set_animation(player, "sit", 30)
+			if is_mc2 then
+				mcl_player.player_set_animation(player, "sit_mount" , 30)
 			else
-				default.player_set_animation(player, "sit", 30)
+				player_api.set_animation(player, "sit", 30)
 			end
 		end
 	end)
@@ -218,12 +199,13 @@ function mobs.attach(entity, player)
 	player:set_look_horizontal(entity.object:get_yaw() - rot_view)
 end
 
+-- detatch player from mob
 
 function mobs.detach(player)
 
 	force_detach(player)
 
-	minetest.after(0.1, function()
+	core.after(0.1, function()
 
 		if player and player:is_player() then
 
@@ -236,15 +218,18 @@ function mobs.detach(player)
 	end)
 end
 
+-- vars
+
+local damage_counter = 0
+
+-- ride mob like car or horse
 
 function mobs.drive(entity, moving_anim, stand_anim, can_fly, dtime)
 
 	local yaw = entity.object:get_yaw() or 0
 	local rot_view = 0
 
-	if entity.player_rotation.y == 90 then
-		rot_view = pi / 2
-	end
+	if entity.player_rotation.y == 90 then rot_view = pi / 2 end
 
 	local acce_y = 0
 	local velo = entity.object:get_velocity() ; if not velo then return end
@@ -256,17 +241,13 @@ function mobs.drive(entity, moving_anim, stand_anim, can_fly, dtime)
 
 		local ctrl = entity.driver:get_player_control()
 
-		-- move forwards
-		if ctrl.up then
+		if ctrl.up then -- move forwards
 
 			entity.v = entity.v + entity.accel * dtime
 
-		-- move backwards
-		elseif ctrl.down then
+		elseif ctrl.down then -- move backwards
 
-			if entity.max_speed_reverse == 0 and entity.v == 0 then
-				return
-			end
+			if entity.max_speed_reverse == 0 and entity.v == 0 then return end
 
 			entity.v = entity.v - entity.accel * dtime
 		end
@@ -278,12 +259,8 @@ function mobs.drive(entity, moving_anim, stand_anim, can_fly, dtime)
 
 			horz = yaw
 
-			if ctrl.left then
-				horz = horz + 0.05
-
-			elseif ctrl.right then
-				horz = horz - 0.05
-			end
+			if ctrl.left then horz = horz + 0.05
+			elseif ctrl.right then horz = horz - 0.05 end
 		else
 			horz = entity.driver:get_look_horizontal() or 0
 		end
@@ -292,8 +269,7 @@ function mobs.drive(entity, moving_anim, stand_anim, can_fly, dtime)
 
 		if can_fly then
 
-			-- fly up
-			if ctrl.jump then
+			if ctrl.jump then -- fly up
 
 				velo.y = velo.y + 1
 
@@ -306,8 +282,7 @@ function mobs.drive(entity, moving_anim, stand_anim, can_fly, dtime)
 				if velo.y < 0 then velo.y = 0 end
 			end
 
-			-- fly down
-			if ctrl.sneak then
+			if ctrl.sneak then -- fly down
 
 				velo.y = velo.y - 1
 
@@ -320,10 +295,11 @@ function mobs.drive(entity, moving_anim, stand_anim, can_fly, dtime)
 				if velo.y > 0 then velo.y = 0 end
 			end
 		else
-			-- jump
-			if ctrl.jump then
+			if ctrl.jump then -- jump (only when standing on solid surface)
 
-				if velo.y == 0 then
+				if velo.y == 0
+				and entity.standing_on ~= "air" and entity.standing_on ~= "ignore"
+				and core.get_item_group(entity.standing_on, "liquid") == 0 then
 					velo.y = velo.y + entity.jump_height
 					acce_y = acce_y + (acce_y * 3) + 1
 				end
@@ -331,20 +307,45 @@ function mobs.drive(entity, moving_anim, stand_anim, can_fly, dtime)
 		end
 	end
 
+	local ni = node_is(entity)
+
+	-- env damage
+	if ni == "liquid" or ni == "lava" then
+
+		damage_counter = damage_counter + dtime
+
+		if damage_counter > 1 then
+
+			local damage = 0
+
+			if entity.lava_damage > 0 and ni == "lava" then
+				damage = entity.lava_damage
+			elseif entity.water_damage > 0 and ni == "liquid" then
+				damage = entity.water_damage
+			end
+
+			if damage >= 1 then
+
+				entity.object:punch(entity.object, 1.0, {
+					full_punch_interval = 1.0,
+					damage_groups = {fleshy = damage}
+				}, nil)
+			end
+
+			damage_counter = 0
+		end
+	end
+
 	-- if not moving then set animation and return
 	if entity.v == 0 and velo.x == 0 and velo.y == 0 and velo.z == 0 then
 
-		if stand_anim then
-			mobs:set_animation(entity, stand_anim)
-		end
+		if stand_anim then entity:set_animation(stand_anim) end
 
 		return
 	end
 
 	-- set moving animation
-	if moving_anim then
-		mobs:set_animation(entity, moving_anim)
-	end
+	if moving_anim then entity:set_animation(moving_anim) end
 
 	-- Stop!
 	local s = get_sign(entity.v)
@@ -375,36 +376,13 @@ function mobs.drive(entity, moving_anim, stand_anim, can_fly, dtime)
 
 	p.y = p.y - 0.5
 
-	local ni = node_is(p)
 	local v = entity.v
 
 	if ni == "air" then
 
-		if can_fly == true then
-			new_acce.y = 0
-		end
+		if can_fly then new_acce.y = 0 ; acce_y = 0 end
 
 	elseif ni == "liquid" or ni == "lava" then
-
-		if ni == "lava" and entity.lava_damage ~= 0 then
-
-			entity.lava_counter = (entity.lava_counter or 0) + dtime
-
-			if entity.lava_counter > 1 then
-
-				minetest.sound_play("default_punch", {
-					object = entity.object,
-					max_hear_distance = 5
-				}, true)
-
-				entity.object:punch(entity.object, 1.0, {
-					full_punch_interval = 1.0,
-					damage_groups = {fleshy = entity.lava_damage}
-				}, nil)
-
-				entity.lava_counter = 0
-			end
-		end
 
 		local terrain_type = entity.terrain_type
 
@@ -413,7 +391,7 @@ function mobs.drive(entity, moving_anim, stand_anim, can_fly, dtime)
 			new_acce.y = 0
 			p.y = p.y + 1
 
-			if node_is(p) == "liquid" then
+			if core.get_item_group(entity.standing_in, "liquid") ~= 0 then
 
 				if velo.y >= 5 then
 					velo.y = 5
@@ -449,32 +427,26 @@ function mobs.drive(entity, moving_anim, stand_anim, can_fly, dtime)
 	entity.v2 = v
 end
 
+-- fly mob in facing direction (by D00Med, edited by TenPlus1)
 
--- directional flying routine by D00Med (edited by TenPlus1)
 function mobs.fly(entity, _, speed, shoots, arrow, moving_anim, stand_anim)
 
 	local ctrl = entity.driver:get_player_control() ; if not ctrl then return end
-	local velo = entity.object:get_velocity()
+	local velo = entity.object:get_velocity() ; if not velo then return end
 	local dir = entity.driver:get_look_dir()
-	local yaw = entity.driver:get_look_horizontal() + 1.57
+	local yaw = entity.driver:get_look_horizontal() ; if not yaw then return end
 
-	if not ctrl or not velo then return end
+	yaw = yaw  + 1.57 -- fix from get_yaw to get_look_horizontal
 
 	if ctrl.up then
 
-		entity.object:set_velocity({
-			x = dir.x * speed,
-			y = dir.y * speed + 2,
-			z = dir.z * speed
-		})
+		entity.object:set_velocity(
+				{x = dir.x * speed, y = dir.y * speed + 2, z = dir.z * speed})
 
 	elseif ctrl.down then
 
-		entity.object:set_velocity({
-			x = -dir.x * speed,
-			y =  dir.y * speed + 2,
-			z = -dir.z * speed
-		})
+		entity.object:set_velocity(
+				{x = -dir.x * speed, y =  dir.y * speed + 2, z = -dir.z * speed})
 
 	elseif not ctrl.down or ctrl.up or ctrl.jump then
 		entity.object:set_velocity({x = 0, y = -2, z = 0})
@@ -486,7 +458,7 @@ function mobs.fly(entity, _, speed, shoots, arrow, moving_anim, stand_anim)
 	if ctrl.LMB and ctrl.sneak and shoots then
 
 		local pos = entity.object:get_pos()
-		local obj = minetest.add_entity({
+		local obj = core.add_entity({
 			x = pos.x + 0 + dir.x * 2.5,
 			y = pos.y + 1.5 + dir.y,
 			z = pos.z + 0 + dir.z * 2.5}, arrow)
@@ -496,7 +468,7 @@ function mobs.fly(entity, _, speed, shoots, arrow, moving_anim, stand_anim)
 		if ent then
 
 			ent.switch = 1 -- for mob specific arrows
-			ent.owner_id = tostring(entity.object) -- so arrows dont hurt entity you are riding
+			ent.owner_id = tostring(entity.object) -- so arrows dont hurt mob
 
 			local vec = {x = dir.x * 6, y = dir.y * 6, z = dir.z * 6}
 
@@ -509,11 +481,9 @@ function mobs.fly(entity, _, speed, shoots, arrow, moving_anim, stand_anim)
 		end
 	end
 
-	-- change animation if stopped
 	if velo.x == 0 and velo.y == 0 and velo.z == 0 then
-		mobs:set_animation(entity, stand_anim)
+		entity:set_animation(stand_anim) -- stopped animation
 	else
-		-- moving animation
-		mobs:set_animation(entity, moving_anim)
+		entity:set_animation(moving_anim) -- moving animation
 	end
 end

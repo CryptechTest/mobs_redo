@@ -19,10 +19,43 @@ https://forum.minetest.net/viewtopic.php?f=11&t=9917
 - **Shears**. Used to right-click sheep and return 1-3 wool.
 - **Protection Rune**. Protects tamed mobs from being harmed by other players.
 - **Mob Fence and Fence Top**. Stops mobs escaping or glitching throughfences.
+- Add mobs:mob_repellent block to stop mobs spawning within 16 node radius.
 
-**Lucky Blocks**: 12
+**Lucky Blocks**: 13
 
 ## Changelog
+
+### Version 1.62
+
+* Added ability for mobs to hear using self.on_sound() function
+* Added 'mobs_can_hear' setting to turn above feature on/off
+* Added {eatable} group to food items and HP in description
+* Fixed timer bug when attacking
+* Fixed fall damage check when riding mob
+* Calculate damage before do_punch function called
+* Add function to check for dropped items and for mob to do something with them
+* Add vizlib support to draw mob repellent area when punched
+
+### Version 1.61
+
+* Fixed mob damage when riding mobs
+* Added entity:is_inside(itemtable) function (thx cora)
+* Added self.attack_patience value so mobs stop attacking unseen players
+* Added self.homing so that arrows follow player when visible
+* Added support for Visual Harm 1ndicators mod to show health bars
+* Added self.node_damage flag which is true by default to enable damage_per_second node damage
+* Added check for on_death() function before using mob api's own on_die() one
+* Added mobs:fallback_node for when current [game] hasn't defined mapgen_dirt node
+
+### Version 1.60
+
+* Move mob and arrow entities to use initial_properties
+* Spawn eggs check if mob is available when creating
+* Used get/set_properties() within API for mob properties
+* Moved nametag variable to self._nametag
+* Tidied breeding function
+* Better MineClone2 / MineClonia support added
+* Tweaked and tidied code in places
 
 ### Version 1.57
 
@@ -33,6 +66,9 @@ https://forum.minetest.net/viewtopic.php?f=11&t=9917
 * Refactored do_jump and added get_nodes function
 * Many bug fixes and tweaks to improve performance
 * Added 'mobs_attack_creatura' setting so that monsters can attack Creatura mobs
+* Nodes can be added to 'runaway_from' table
+* Better Mineclone2 compatibility with api, items and recipes
+* Added 'mob_log_spawn' setting to log spawning of mobs and position
 
 ### Version 1.56
 
@@ -93,7 +129,7 @@ https://forum.minetest.net/viewtopic.php?f=11&t=9917
 
 ### Version 1.48
 
-* Added `mobs:set_velocity(self, velocity)` global function
+* Added `mobs:set_velocity(self, velocity)` global function [deprecated]
 
 ### Version 1.47
 
